@@ -3,6 +3,7 @@ __author__ = 'cillian'
 import emokit
 import socket
 import gevent
+import struct
 
 
 def main():
@@ -30,11 +31,23 @@ def main():
                 packet = headset.dequeue()
 
                 # convert packet to byte array
-                sensor_values = bytearray()
-                for sensor in packet.sensors:
-                    sensor_values.append(sensor['value'])
+                sensor_values = [packet.F3,
+                    packet.FC5,
+                    packet.AF3,
+                    packet.F7,
+                    packet.T7,
+                    packet.P7,
+                    packet.O1,
+                    packet.O2,
+                    packet.P8,
+                    packet.T8,
+                    packet.F8,
+                    packet.AF4,
+                    packet.FC6,
+                    packet.F4]
 
-                sent = clientsocket.send(sensor_values)
+                write_buffer = struct.pack('H' *len(sensor_values), *sensor_values)
+                sent = clientsocket.send(write_buffer)
         finally:
             headset.close()
 
