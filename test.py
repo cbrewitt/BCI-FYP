@@ -1,17 +1,14 @@
 __author__ = 'cillian'
 
 import emokit
+import socket
 import gevent
+import struct
 
-headset = emokit.emotiv.Emotiv()
-gevent.spawn(headset.setup)
-gevent.sleep(1)
 
-packet = headset.dequeue()
+def main():
 
-sensor_values = bytearray()
-for sensor in packet.sensors:
-    sensor_values.append(sensor['value'])
-    print sensor
 
-pass
+
+if __name__ == "__main__":
+    main()
