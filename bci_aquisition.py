@@ -4,8 +4,6 @@ import emokit
 import socket
 import gevent
 import struct
-import datetime
-
 
 def main():
     headset = None
@@ -13,57 +11,50 @@ def main():
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.bind(('localhost', 7462))
 
+    # wait for client to connect
+    print 'Waiting for client to connect...'
+    serversocket.listen(1)
+    (clientsocket, address) = serversocket.accept()
+    print 'Client connected'
 
-    while True:
+    try:
 
-        # wait for client to connect
-        print 'Waiting for client to connect...'
-        serversocket.listen(1)
-        (clientsocket, address) = serversocket.accept()
-        print 'Client connected'
+        # begin reading packets from headset
+        print 'Connecting to headset...'
+        headset = emokit.emotiv.Emotiv()
+        gevent.spawn(headset.setup)
+        gevent.sleep(1)
 
-        try:
+        print 'Receiving packets from headset...'
+        sent = True
+        # loop to send packets to client
+        while sent:
+            packet = headset.dequeue()
 
-            # begin reading packets from headset
-            print 'Connecting to headset...'
-            headset = emokit.emotiv.Emotiv()
-            gevent.spawn(headset.setup)
-            gevent.sleep(1)
+            # convert packet to byte array
+            sensor_values = [int(packet.F3[0]),
+                int(packet.FC5[0]),
+                int(packet.AF3[0]),
+                int(packet.F7[0]),
+                int(packet.T7[0]),
+                int(packet.P7[0]),
+                int(packet.O1[0]),
+                int(packet.O2[0]),
+                int(packet.P8[0]),
+                int(packet.T8[0]),
+                int(packet.F8[0]),
+                int(packet.AF4[0]),
+                int(packet.FC6[0]),
+                int(packet.F4[0])]
 
-            print 'Receiving packets from headset...'
-            sent = True
-            # loop to send packets to client
-            while sent:
-                packet = headset.dequeue()
+            for x in range (len(sensor_values)):
+                sensor_values[x] -= 8192
 
-                # convert packet to byte array
-                sensor_values = [int(packet.F3[0]),
-                    int(packet.FC5[0]),
-                    int(packet.AF3[0]),
-                    int(packet.F7[0]),
-                    int(packet.T7[0]),
-                    int(packet.P7[0]),
-                    int(packet.O1[0]),
-                    int(packet.O2[0]),
-                    int(packet.P8[0]),
-                    int(packet.T8[0]),
-                    int(packet.F8[0]),
-                    int(packet.AF4[0]),
-                    int(packet.FC6[0]),
-                    int(packet.F4[0])]
+            write_buffer = struct.pack('h' *len(sensor_values), *sensor_values)
+            sent = clientsocket.send(write_buffer)
 
-                for x in range (len(sensor_values)):
-                    sensor_values[x] -= 8192
-
-                write_buffer = struct.pack('h' *len(sensor_values), *sensor_values)
-                sent = clientsocket.send(write_buffer)
-
-        except socket.error:
-            print "Client disconnected"
-
-
-
-
+    except socket.error:
+        print "Client disconnected"
 
 if __name__ == "__main__":
     main()
